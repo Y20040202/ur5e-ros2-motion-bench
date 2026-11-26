@@ -66,3 +66,39 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# UR5e workspace, large data and local credentials
+/external/
+/data/
+/datasets/
+/checkpoints/
+/runs/
+/outputs/
+/logs/
+/hf_cache/
+/build/
+/install/
+/log/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+*.onnx
+*.npz
+*.h5
+*.hdf5
+*.parquet
+*.db3
+*.bag
+*.mcap
+*.mp4
+*.avi
+*.webm
+
+# Small launch logs are experiment evidence
+!/evidence/**/*.log

@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.16)
+project(ur5e_bench)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(moveit_ros_planning_interface REQUIRED)
+find_package(moveit_msgs REQUIRED)
+find_package(Threads REQUIRED)
+
+add_executable(ur5e_smoke src/ur5e_smoke.cpp)
+target_compile_features(ur5e_smoke PRIVATE cxx_std_17)
+ament_target_dependencies(ur5e_smoke rclcpp moveit_ros_planning_interface moveit_msgs)
+target_link_libraries(ur5e_smoke Threads::Threads)
+install(TARGETS ur5e_smoke DESTINATION lib/${PROJECT_NAME})
+ament_package()

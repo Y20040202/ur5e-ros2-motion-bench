@@ -6,8 +6,8 @@
 
 | 阶段 | 状态 | 验收证据 |
 | --- | --- | --- |
-| 1 · 仿真启动与首次执行（U01–U02） | **首次执行已实测**。RViz 规划后点击 Execute，Gazebo 中的 UR5e 实际运动。完整反馈待归档。 | 轨迹控制器和 Action 状态、Gazebo 运动、同一关节的前后反馈 |
-| 2 · C++ 规划与工位用例（U03–U05） | 待开展 | 在工作台、单料箱和方块组成的最小工位验证可达、不可达和避障用例。分别记录规划、执行与两类末端误差。 |
+| 1 · 仿真启动与首次执行（U01–U02） | **已验收** | RViz 规划并执行，Gazebo 机械臂转动。两帧关节反馈显示 `shoulder_pan_joint` 增加约 `1.300978 rad`。[验收记录](evidence/u03-u04/README.md#u02-rviz-执行与关节反馈) |
+| 2 · C++ 规划、执行与工位用例（U03–U05） | **U03–U04 已验收，U05 待验收** | `plan_code=1`，`execute_code=1`。单次仿真末端规划误差 `0.127266 mm`，跟踪误差 `0.0226108 mm`。[验收记录](evidence/u03-u04/README.md) |
 | 3 · 双规划器配对对照（U06） | 待开展 | 固定起终点、碰撞场景和时间预算，对比 RRTConnect 与 RRT*，保存逐试次 CSV。 |
 | 4 · 直线接近、轨迹复核与复跑（U07–U09） | 待开展 | Pilz LIN 通行及阻挡用例、执行前新增障碍后的复核、一次备选重试及复跑记录 |
 
@@ -52,4 +52,4 @@ diff -u evidence/d06/joints-before.yaml evidence/d06/joints-after.yaml
 
 ## U03 C++ 起步节点
 
-`ur5e_bench/` 内已有 `ur5e_smoke`，默认只规划一个小幅关节目标。先验收 U02，再按[编译和执行步骤](docs/implementation.md#u03-编译并验证只规划)运行。
+`ur5e_smoke` 默认只规划关节目标。启用 `execute_motion` 后，节点请求执行并由执行后的关节反馈计算 `tool0` 的位置。可按[编译和执行步骤](docs/implementation.md#u03-编译并验证只规划)运行，并对照[实测记录](evidence/u03-u04/README.md)。

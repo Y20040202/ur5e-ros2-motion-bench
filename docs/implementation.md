@@ -46,7 +46,7 @@ Gazebo 显示 UR5e、RViz 显示 MotionPlanning 后，保持终端 A 运行。�
 
 ### U02 核对控制器与运动前后反馈
 
-本机已实测 RViz 执行能驱动 Gazebo 中的 UR5e。阶段验收还需要归档控制器、Action 服务和运动前后的关节状态。
+本机已实测 RViz 执行能驱动 Gazebo 中的 UR5e。控制器状态转录和运动前后的关节状态已归档在 [U02–U04 实测记录](../evidence/u03-u04/README.md#u02-rviz-执行与关节反馈)。
 
 在终端 B 进入项目仓库，推荐用 `bash scripts/collect_u02.sh before` 采集，执行运动并停稳后运行 `bash scripts/collect_u02.sh after`。也可在终端 B 手动采集。
 

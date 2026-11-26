@@ -1,13 +1,15 @@
-# 项目 2 · UR5e 运动规划与轨迹执行测试
+# 项目 2 · 基于 ROS 2 与 Gazebo 的 UR5e 运动规划与视觉分拣工站
 
 计划于 2026 年 11 月 26 日提前开工，四个工作日，每天约 3–4 小时。使用本机 Ubuntu 24.04 图形桌面、ROS 2 Jazzy、Gazebo Harmonic、MoveIt 2、ros2_control 和 C++17。11 月 30 日至 12 月 2 日留给环境故障和复跑。表中次数是实验目标，成果以实测记录为准。
+
+先完成 U01–U09 的规划与执行基线。U05 开始把手工搭建的最小工位用于碰撞实验。通过 U09 后，按 V01–V04 逐项接入夹爪、相机、任务状态机和点云。
 
 ## 四天安排
 
 | 日期 | 工作阶段 | 当天验收 | Git 提交建议 |
 | --- | --- | --- | --- |
 | 11/26 · 第一天 | U01 官方启动，U02 RViz 执行与反馈 | Gazebo 中执行一次实际运动，保存控制器、Action、时钟和关节反馈 | `docs: record UR5e simulation baseline` |
-| 11/27 · 第二天 | U03 C++ 单目标规划，U04 执行与误差，U05 三类场景 | 可达、不可达和障碍物用例有独立记录，能区分规划、执行和反馈失败 | `feat: add UR5e planning and execution cases` |
+| 11/27 · 第二天 | U03 C++ 单目标规划，U04 执行与误差，U05 三类场景 | 最小工位有可达、不可达和障碍物用例，能区分规划、执行和反馈失败 | `feat: add UR5e planning and execution cases` |
 | 11/28 · 第三天 | U06 双规划器配对对照 | 目标 40 次规划请求，输出条件、逐试次 CSV 与代表性执行记录 | `eval: compare RRTConnect and RRTstar` |
 | 11/29 · 第四天 | U07 一次备选重试，U08 Pilz LIN，U09 复跑与演示 | 可复现的重试日志、直线通行和阻挡记录、复跑 README | `test: verify retry, linear approach and replay` |
 
@@ -29,21 +31,24 @@ ros2 pkg prefix ur_robot_driver
 
 11 月 26 日首次启动时，仿真已进入 MoveIt 配置阶段，随后因缺少 `ur_robot_driver` 中止。若复现此错误，只补装 `sudo apt install ros-jazzy-ur-robot-driver`，再用 `ros2 pkg prefix ur_robot_driver` 核对。Jazzy 的 MoveIt 启动文件通过该包中的 `wait_for_robot_description` 等待 `/robot_description`。仿真入口已启用 RViz。[Jazzy 启动源码](https://github.com/UniversalRobots/Universal_Robots_ROS2_Driver/blob/jazzy/ur_moveit_config/launch/ur_moveit.launch.py)
 
-三个包确认后启动：
+三个包确认后，沿用本机已经完成 RViz 执行的控制器配置。下例使用项目约定的 YAML 路径。
 
 ```bash
+cfg="$HOME/ur5e_ws/config/ur5e-gazebo-controllers.yaml"
 out="$HOME/ur5e_ws/evidence/d06"
 mkdir -p "$out"
 set -o pipefail
 ros2 launch ur_simulation_gz ur_sim_moveit.launch.py ur_type:=ur5e \
-  2>&1 | tee "$out/launch.log"
+  controllers_file:="$cfg" 2>&1 | tee "$out/launch.log"
 ```
 
 Gazebo 显示 UR5e、RViz 显示 MotionPlanning 后，保持终端 A 运行。记下实际软件包版本。
 
 ### U02 核对控制器与运动前后反馈
 
-终端 B 运行：
+本机已实测 RViz 执行能驱动 Gazebo 中的 UR5e。阶段验收还需要归档控制器、Action 服务和运动前后的关节状态。
+
+在终端 B 进入项目仓库，推荐用 `bash scripts/collect_u02.sh before` 采集，执行运动并停稳后运行 `bash scripts/collect_u02.sh after`。也可在终端 B 手动采集。
 
 ```bash
 source /opt/ros/jazzy/setup.bash
@@ -88,7 +93,11 @@ ros2 run ur5e_bench ur5e_smoke --ros-args \
 3. **规划误差**用规划终点与任务目标的欧氏距离，**跟踪误差**用反馈终点与规划终点的欧氏距离，均记为 mm。关节目标先用 FK 得到任务目标。反馈超时单独记录。
 4. 给节点增加 YAML 用例入口及 `plan_only` 和 `execute` 模式，保存用例目标、起始关节状态和场景 ID。
 
-### U05 三类用例与 CSV
+### U05 最小工位、三类用例与 CSV
+
+1. 亲手编辑 `sorting_workcell.sdf`。先搭上表面高 `0.22 m` 的工作台，再用一块底板和四面箱壁做一个料箱。边长 `0.06 m` 的方块直接放在台面上，静置时中心约为 `Z = 0.25 m`。
+2. 用上次实测可用的控制器配置启动，并通过 `world_file` 加载工位。统一 Gazebo 与 MoveIt 中的参考系、关键障碍物尺寸和位姿。分别确认 Gazebo 中的模型和 MoveIt 中的对象 ID。
+3. 在 RViz 亲手选定来料上方、箱口上方两个位姿，保存位置、朝向和起始关节状态。先验证正常规划，再加入已知障碍复测。记录障碍挡在目标处还是途中。将这组位姿留给 U08 的直线接近测试。
 
 | 用例 | 构造方式 | 验收 |
 | --- | --- | --- |
@@ -108,7 +117,7 @@ case_id,scene_id,planner,repeat,attempt,plan_code,planning_ms,path_length_m,exec
 
 ## 第三天 · U06 RRTConnect 与 RRT* 配对对照
 
-1. 选空场景和带箱体场景各 2 个可达目标。每个用例保存固定的起始关节状态、目标、参考系、碰撞场景和时间预算。建议起步用 2 秒规划预算，并固定速度缩放。
+1. 选无遮挡工位和加入挡板的工位各 2 个可达目标。每个用例保存固定的起始关节状态、目标、参考系、碰撞场景和时间预算。建议起步用 2 秒规划预算，并固定速度缩放。
 2. 两个规划器各跑一条冒烟用例。核对实际加载的管线和规划器 ID。常见 OMPL ID 是 `RRTConnectkConfigDefault` 和 `RRTstarkConfigDefault`。若后者未加载，为实际规划组补配置，并从日志复核所用规划器。
 3. 两个规划器交替运行，每个用例各重复 5 次，合计 **40 次规划请求**。每次只请求一次规划，关闭任务层重试，以 `plan_only` 为主。时间紧时每组先跑 3 次，以实际完成的 24 次报告。
 4. 分别汇总规划成功数及分母、耗时中位数和成功轨迹的路径长度中位数。用 FK 计算各轨迹点的末端位置，累加相邻点的距离，统一用 m。若同时记录 MoveIt 内部规划时间和节点墙钟耗时，分别命名。
@@ -134,16 +143,41 @@ case_id,scene_id,planner,repeat,attempt,plan_code,planning_ms,path_length_m,exec
 
 按 README 启动 Gazebo、编译和运行，至少复跑一条成功及一条失败用例。核对软件包版本、运行次数、逐试次 CSV 和代表性回放。用 60–90 秒演示串起 C++ 请求、仿真运动、实测误差和一次失败后的处理。简历填写实际规划次数、执行次数和误差。
 
-## 每天同步到 GitHub 的材料
+## V01–V04 · 分拣工站扩展
+
+通过 U09 后再接入下列模块。每个阶段先用单独的测试验证新增接口，再复跑上一个阶段的成功用例。夹爪适配、接触与视觉定位按实测排期。
+
+### V01 夹爪与固定坐标分拣
+
+- 先测空夹及夹住 6 cm 方块时的指间距。验证夹爪开合、关节反馈和工件在 Gazebo 中的抬升与释放。
+- 用已知工件位姿完成分拣。OMPL 负责自由空间进场和搬运，Pilz LIN 用于直线接近、抬升或退出。测量物体离桌、搬运途中掉落和落箱后停稳。抓取和释放时同步更新 MoveIt 的附着碰撞体。
+- 接触夹持耗时过长时，先单测 Gazebo 的固定关节绑定与解绑。若采用该方式，标明固定关节搬运模式，并单独报告接触夹持结果。
+
+### V02 AprilTag 视觉定位与 A/B 分流
+
+- 固定顶视相机，先覆盖来料区。核对图像、相机内参和时间戳，通过 `tf2` 将位姿转到基座坐标系，再应用标签到抓取点的偏移。
+- 自己布置中心、左侧、右侧三个工件位置，用 Gazebo 真值评测定位误差。添加第二个料箱，以两个标签 ID 测试分流。记录目标箱、实际落箱结果和用时。
+
+### V03 C++ 任务状态机与故障实验
+
+- 用状态机串起定位、预抓取、直线接近、夹持、搬运与释放。在线判断使用夹爪反馈和相机，独立评测用 Gazebo 真值记录物体是否被抬升、搬运和落箱。
+- 分别复现标签丢失、夹空和规划后新增挡板。记录失败阶段、错误码、是否下发轨迹及重试结果。保存正常分拣和受阻流程的代表性回放。
+
+### V04 RGB-D 点云与 OctoMap（可选）
+
+- 确认点云与机器人坐标对齐，并在 RViz 核对过滤后的点云和占据地图。用相机观察到的挡板复现 U07 执行前轨迹复核，记录占据地图更新与拦截结果。
+
+## 按阶段同步到 GitHub 的材料
 
 本仓库按阶段归档 UR5e 的代码、配置和运行证据。四项目手册中的计划副本存于 `Y20040202/RESEARCH`。本机项目根目录建议用 `~/ur5e_ws/src/ur5e-ros2-motion-bench`。独立仓库连接并核对 `git remote -v` 后，按第一张表的节点推送。当天只提交实测所需的文件，提交前检查 `git status --short` 和 `git diff --cached --stat`。
 
 | 阶段 | 提交内容 |
 | --- | --- |
 | U01–U02 | 从 `~/ur5e_ws/evidence/d06` 取启动日志、版本、控制器、Action 及前后反馈；README 写复现命令 |
-| U03–U05 | C++ 源码、CMake 与包清单、用例 YAML、三类结果 CSV 及失败日志 |
+| U03–U05 | C++ 源码、CMake 与包清单、工位 SDF、用例 YAML、三类结果 CSV 及失败日志 |
 | U06 | 两个规划器的实际配置、冻结用例、逐试次 CSV、汇总与一组执行反馈 |
-| U07–U09 | 重试证据、LIN 通行与阻挡记录、最终 README 和代表性回放链接 |
+| U07–U09 | 重试证据、LIN 通行与阻挡记录、基线复跑说明和代表性回放链接 |
+| V01–V04 | 按已验收阶段提交夹爪与传感器配置、任务代码、误差或分拣 CSV、异常日志及代表性回放 |
 
 工作区生成的 `build/`、`install/`、`log/` 和大体积原始录像留在本机或附件中。
 

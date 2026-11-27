@@ -4,7 +4,7 @@
 
 ## U02 RViz 执行与关节反馈
 
-Gazebo 中观察到 UR5e 执行 RViz 的 Plan → Execute。控制器列表中，`scaled_joint_trajectory_controller`（`joint_trajectory_controller/JointTrajectoryController`）和 `joint_state_broadcaster` 均为 `active`。
+控制器列表中，`scaled_joint_trajectory_controller`（`joint_trajectory_controller/JointTrajectoryController`）和 `joint_state_broadcaster` 均为 `active`。下表记录了两帧实测关节反馈。独立在 RViz 完成 Plan → Execute 待验收。U04 的 C++ 执行结果见下文。
 
 | 快照 | 仿真时间（s） | `shoulder_pan_joint`（rad） |
 | --- | ---: | ---: |
